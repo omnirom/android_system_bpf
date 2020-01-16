@@ -37,14 +37,10 @@
 #include <android-base/properties.h>
 #include <android-base/unique_fd.h>
 #include <log/log.h>
-#include <netdutils/MemBlock.h>
-#include <netdutils/Slice.h>
 #include <processgroup/processgroup.h>
 
 using android::base::GetUintProperty;
 using android::base::unique_fd;
-using android::netdutils::MemBlock;
-using android::netdutils::Slice;
 
 // The buffer size for the buffer that records program loading logs, needs to be large enough for
 // the largest kernel program.
@@ -55,91 +51,83 @@ namespace bpf {
 /*  The bpf_attr is a union which might have a much larger size then the struct we are using, while
  *  The inline initializer only reset the field we are using and leave the reset of the memory as
  *  is. The bpf kernel code will performs a much stricter check to ensure all unused field is 0. So
- *  this syscall will normally fail with E2BIG if we don't do a memset to bpf_attr.
+ *  this syscall will normally fail with E2BIG if we don't fully zero bpf_attr.
  */
 
-int bpf(int cmd, Slice bpfAttr) {
-    return syscall(__NR_bpf, cmd, bpfAttr.base(), bpfAttr.size());
+int bpf(int cmd, bpf_attr& attr) {
+    return syscall(__NR_bpf, cmd, &attr, sizeof(attr));
 }
 
 int createMap(bpf_map_type map_type, uint32_t key_size, uint32_t value_size, uint32_t max_entries,
               uint32_t map_flags) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.map_type = map_type;
     attr.key_size = key_size;
     attr.value_size = value_size;
     attr.max_entries = max_entries;
     attr.map_flags = map_flags;
 
-    return bpf(BPF_MAP_CREATE, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_MAP_CREATE, attr);
 }
 
 int writeToMapEntry(const base::unique_fd& map_fd, void* key, void* value, uint64_t flags) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.map_fd = map_fd.get();
     attr.key = ptr_to_u64(key);
     attr.value = ptr_to_u64(value);
     attr.flags = flags;
 
-    return bpf(BPF_MAP_UPDATE_ELEM, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_MAP_UPDATE_ELEM, attr);
 }
 
 int findMapEntry(const base::unique_fd& map_fd, void* key, void* value) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.map_fd = map_fd.get();
     attr.key = ptr_to_u64(key);
     attr.value = ptr_to_u64(value);
 
-    return bpf(BPF_MAP_LOOKUP_ELEM, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_MAP_LOOKUP_ELEM, attr);
 }
 
 int deleteMapEntry(const base::unique_fd& map_fd, void* key) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.map_fd = map_fd.get();
     attr.key = ptr_to_u64(key);
 
-    return bpf(BPF_MAP_DELETE_ELEM, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_MAP_DELETE_ELEM, attr);
 }
 
 int getNextMapKey(const base::unique_fd& map_fd, void* key, void* next_key) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.map_fd = map_fd.get();
     attr.key = ptr_to_u64(key);
     attr.next_key = ptr_to_u64(next_key);
 
-    return bpf(BPF_MAP_GET_NEXT_KEY, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_MAP_GET_NEXT_KEY, attr);
 }
 
 int getFirstMapKey(const base::unique_fd& map_fd, void* firstKey) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.map_fd = map_fd.get();
     attr.key = 0;
     attr.next_key = ptr_to_u64(firstKey);
 
-    return bpf(BPF_MAP_GET_NEXT_KEY, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_MAP_GET_NEXT_KEY, attr);
 }
 
 int bpfFdPin(const base::unique_fd& map_fd, const char* pathname) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.pathname = ptr_to_u64((void*)pathname);
     attr.bpf_fd = map_fd.get();
 
-    return bpf(BPF_OBJ_PIN, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_OBJ_PIN, attr);
 }
 
 int bpfFdGet(const char* pathname, uint32_t flag) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.pathname = ptr_to_u64((void*)pathname);
     attr.file_flags = flag;
-    return bpf(BPF_OBJ_GET, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_OBJ_GET, attr);
 }
 
 int mapRetrieve(const char* pathname, uint32_t flag) {
@@ -147,22 +135,20 @@ int mapRetrieve(const char* pathname, uint32_t flag) {
 }
 
 int attachProgram(bpf_attach_type type, uint32_t prog_fd, uint32_t cg_fd) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.target_fd = cg_fd;
     attr.attach_bpf_fd = prog_fd;
     attr.attach_type = type;
 
-    return bpf(BPF_PROG_ATTACH, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_PROG_ATTACH, attr);
 }
 
 int detachProgram(bpf_attach_type type, uint32_t cg_fd) {
-    bpf_attr attr;
-    memset(&attr, 0, sizeof(attr));
+    bpf_attr attr = {};
     attr.target_fd = cg_fd;
     attr.attach_type = type;
 
-    return bpf(BPF_PROG_DETACH, Slice(&attr, sizeof(attr)));
+    return bpf(BPF_PROG_DETACH, attr);
 }
 
 uint64_t getSocketCookie(int sockFd) {
