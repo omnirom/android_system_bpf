@@ -85,7 +85,7 @@ static inline int createMap(bpf_map_type map_type, uint32_t key_size, uint32_t v
                                });
 }
 
-static inline int writeToMapEntry(const base::unique_fd& map_fd, void* key, void* value,
+static inline int writeToMapEntry(const base::unique_fd& map_fd, const void* key, const void* value,
                                   uint64_t flags) {
     return bpf(BPF_MAP_UPDATE_ELEM, {
                                             .map_fd = static_cast<__u32>(map_fd.get()),
@@ -95,7 +95,7 @@ static inline int writeToMapEntry(const base::unique_fd& map_fd, void* key, void
                                     });
 }
 
-static inline int findMapEntry(const base::unique_fd& map_fd, void* key, void* value) {
+static inline int findMapEntry(const base::unique_fd& map_fd, const void* key, void* value) {
     return bpf(BPF_MAP_LOOKUP_ELEM, {
                                             .map_fd = static_cast<__u32>(map_fd.get()),
                                             .key = ptr_to_u64(key),
@@ -103,14 +103,14 @@ static inline int findMapEntry(const base::unique_fd& map_fd, void* key, void* v
                                     });
 }
 
-static inline int deleteMapEntry(const base::unique_fd& map_fd, void* key) {
+static inline int deleteMapEntry(const base::unique_fd& map_fd, const void* key) {
     return bpf(BPF_MAP_DELETE_ELEM, {
                                             .map_fd = static_cast<__u32>(map_fd.get()),
                                             .key = ptr_to_u64(key),
                                     });
 }
 
-static inline int getNextMapKey(const base::unique_fd& map_fd, void* key, void* next_key) {
+static inline int getNextMapKey(const base::unique_fd& map_fd, const void* key, void* next_key) {
     return bpf(BPF_MAP_GET_NEXT_KEY, {
                                              .map_fd = static_cast<__u32>(map_fd.get()),
                                              .key = ptr_to_u64(key),
@@ -140,17 +140,18 @@ static inline int mapRetrieve(const char* pathname, uint32_t flag) {
     return bpfFdGet(pathname, flag);
 }
 
-static inline int attachProgram(bpf_attach_type type, uint32_t prog_fd, uint32_t cg_fd) {
+static inline int attachProgram(bpf_attach_type type, const base::unique_fd& prog_fd,
+                                const base::unique_fd& cg_fd) {
     return bpf(BPF_PROG_ATTACH, {
-                                        .target_fd = cg_fd,
-                                        .attach_bpf_fd = prog_fd,
+                                        .target_fd = static_cast<__u32>(cg_fd.get()),
+                                        .attach_bpf_fd = static_cast<__u32>(prog_fd.get()),
                                         .attach_type = type,
                                 });
 }
 
-static inline int detachProgram(bpf_attach_type type, uint32_t cg_fd) {
+static inline int detachProgram(bpf_attach_type type, const base::unique_fd& cg_fd) {
     return bpf(BPF_PROG_DETACH, {
-                                        .target_fd = cg_fd,
+                                        .target_fd = static_cast<__u32>(cg_fd.get()),
                                         .attach_type = type,
                                 });
 }
