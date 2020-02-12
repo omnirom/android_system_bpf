@@ -106,7 +106,7 @@ std::string BpfLevelToString(BpfLevel bpfLevel) {
     }
 }
 
-BpfLevel getBpfSupportLevel() {
+static BpfLevel getUncachedBpfSupportLevel() {
     struct utsname buf;
     int kernel_version_major;
     int kernel_version_minor;
@@ -133,6 +133,11 @@ BpfLevel getBpfSupportLevel() {
     if (kernel_version_major == 4 && kernel_version_minor >= 9) return BpfLevel::BASIC;
 
     return BpfLevel::NONE;
+}
+
+BpfLevel getBpfSupportLevel() {
+    static BpfLevel cache = getUncachedBpfSupportLevel();
+    return cache;
 }
 
 }  // namespace bpf
