@@ -22,6 +22,24 @@
 
 #include <linux/bpf.h>
 
+// These AID_* constants are permanent constants pulled from:
+//   system/core/libcutils/include/private/android_filesystem_config.h
+//
+// We need access to them from ebpf C code for map definitions
+// and thus don't want to pull in the entire header file.
+//
+// TODO(149434314) - switch to including some appropriate header portion
+#define AID_ROOT 0
+#define AID_SYSTEM 1000
+#define AID_NETWORK_STACK 1073
+#define AID_NET_BT_ADMIN 3001
+#define AID_NET_BT 3002
+#define AID_INET 3003
+#define AID_NET_RAW 3004
+#define AID_NET_ADMIN 3005
+#define AID_NET_BW_STATS 3006
+#define AID_NET_BW_ACCT 3007
+
 /*
  * Map structure to be used by Android eBPF C programs. The Android eBPF loader
  * uses this structure from eBPF object to create maps at boot time.
@@ -44,4 +62,13 @@ struct bpf_map_def {
     // The following are not supported by the Android bpfloader:
     //   unsigned int inner_map_idx;
     //   unsigned int numa_node;
+
+    unsigned int uid;   // uid_t
+    unsigned int gid;   // gid_t
+    unsigned int mode;  // mode_t
+};
+
+struct bpf_prog_def {
+    unsigned int uid;
+    unsigned int gid;
 };
