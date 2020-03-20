@@ -265,10 +265,16 @@ BpfLevel getBpfSupportLevel() {
     int kernel_version_major;
     int kernel_version_minor;
 
-    uint64_t api_level = GetUintProperty<uint64_t>("ro.product.first_api_level", 0);
-    if (api_level == 0) {
-        ALOGE("Cannot determine initial API level of the device");
-        api_level = GetUintProperty<uint64_t>("ro.build.version.sdk", 0);
+    uint64_t api_level = 0;
+    uint64_t omni_bpf_ready = GetUintProperty<uint64_t>("ro.omni.device_bpf_ready", 0);
+    if (omni_bpf_ready == 0) {
+        api_level = GetUintProperty<uint64_t>("ro.product.first_api_level", 0);
+        if (api_level == 0) {
+            ALOGE("Cannot determine initial API level of the device");
+            api_level = GetUintProperty<uint64_t>("ro.build.version.sdk", 0);
+        }
+    } else {
+        api_level = MINIMUM_API_REQUIRED;
     }
 
     // Check if the device is shipped originally with android P.
