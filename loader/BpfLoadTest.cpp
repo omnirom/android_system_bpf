@@ -25,12 +25,10 @@
 #include "bpf/BpfUtils.h"
 #include "include/libbpf_android.h"
 
-using ::testing::TestWithParam;
-
 namespace android {
 namespace bpf {
 
-class BpfLoadTest : public TestWithParam<std::string> {
+class BpfLoadTest : public ::testing::Test {
   protected:
     BpfLoadTest() {}
     int mProgFd;
@@ -51,16 +49,16 @@ class BpfLoadTest : public TestWithParam<std::string> {
          */
         if (!isAtLeastKernelVersion(5, 11, 0)) EXPECT_EQ(setrlimitForTest(), 0);
 
-        mTpProgPath = "/sys/fs/bpf/prog_" + GetParam() + "_tracepoint_sched_sched_switch";
+        mTpProgPath = "/sys/fs/bpf/prog_bpfLoadTpProg_tracepoint_sched_sched_switch";
         unlink(mTpProgPath.c_str());
 
-        mTpNeverLoadProgPath = "/sys/fs/bpf/prog_" + GetParam() + "_tracepoint_sched_sched_wakeup";
+        mTpNeverLoadProgPath = "/sys/fs/bpf/prog_bpfLoadTpProg_tracepoint_sched_sched_wakeup";
         unlink(mTpNeverLoadProgPath.c_str());
 
-        mTpMapPath = "/sys/fs/bpf/map_" + GetParam() + "_cpu_pid_map";
+        mTpMapPath = "/sys/fs/bpf/map_bpfLoadTpProg_cpu_pid_map";
         unlink(mTpMapPath.c_str());
 
-        auto progPath = android::base::GetExecutableDirectory() + "/" + GetParam() + ".o";
+        auto progPath = android::base::GetExecutableDirectory() + "/bpfLoadTpProg.o";
         bool critical = true;
 
         bpf_prog_type kAllowed[] = {
@@ -75,11 +73,11 @@ class BpfLoadTest : public TestWithParam<std::string> {
         };
         EXPECT_EQ(android::bpf::loadProg(progPath.c_str(), &critical, loc), -1);
 
-        EXPECT_EQ(android::bpf::loadProg(progPath.c_str(), &critical), 0);
+        ASSERT_EQ(android::bpf::loadProg(progPath.c_str(), &critical), 0);
         EXPECT_EQ(false, critical);
 
         mProgFd = retrieveProgram(mTpProgPath.c_str());
-        EXPECT_GT(mProgFd, 0);
+        ASSERT_GT(mProgFd, 0);
 
         int ret = bpf_attach_tracepoint(mProgFd, "sched", "sched_switch");
         EXPECT_NE(ret, 0);
@@ -116,18 +114,16 @@ class BpfLoadTest : public TestWithParam<std::string> {
     }
 
     void checkKernelVersionEnforced() {
-        EXPECT_EQ(retrieveProgram(mTpNeverLoadProgPath.c_str()), -1);
-        EXPECT_EQ(errno, ENOENT);
+        ASSERT_EQ(retrieveProgram(mTpNeverLoadProgPath.c_str()), -1);
+        ASSERT_EQ(errno, ENOENT);
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(BpfLoadTests, BpfLoadTest, ::testing::Values("bpfLoadTpProg"));
-
-TEST_P(BpfLoadTest, bpfCheckMap) {
+TEST_F(BpfLoadTest, bpfCheckMap) {
     checkMapNonZero();
 }
 
-TEST_P(BpfLoadTest, bpfCheckMinKernelVersionEnforced) {
+TEST_F(BpfLoadTest, bpfCheckMinKernelVersionEnforced) {
     checkKernelVersionEnforced();
 }
 

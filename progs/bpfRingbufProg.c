@@ -21,14 +21,12 @@
 #define TEST_RINGBUF_MAGIC_NUM 12345
 
 // This ring buffer is for testing purposes only.
-DEFINE_BPF_RINGBUF_EXT(test_ringbuf, __u64, 4096, AID_ROOT, AID_ROOT, 0660, "", "", PRIVATE,
-                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER,
-                       LOAD_ON_ENG, LOAD_ON_USER, LOAD_ON_USERDEBUG);
+DEFINE_BPF_RINGBUF(test_ringbuf, __u64, 4096, AID_ROOT, AID_ROOT, 0660);
 
 // This program is for test purposes only - it should never be attached to a
 // socket, only executed manually with BPF_PROG_RUN.
 DEFINE_BPF_PROG_KVER("skfilter/ringbuf_test", AID_ROOT, AID_ROOT, test_ringbuf_prog, KVER(5, 8, 0))
-(void* unused_ctx) {
+(void* __unused ctx) {
     __u64* output = bpf_test_ringbuf_reserve();
     if (output == NULL) return 1;
 

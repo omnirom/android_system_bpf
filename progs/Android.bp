@@ -30,8 +30,4 @@ cc_library_headers {
 bpf {
     name: "bpfRingbufProg.o",
     srcs: ["bpfRingbufProg.c"],
-    cflags: [
-        "-Wall",
-        "-Werror",
-    ],
 }

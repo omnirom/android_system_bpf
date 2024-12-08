@@ -37,7 +37,6 @@ cc_library {
             },
         },
     },
-
     shared_libs: [
         "libbase",
         "libutils",
@@ -50,12 +49,28 @@ cc_library {
         "bpf_headers",
     ],
     export_include_dirs: ["include"],
+    defaults: ["bpf_cc_defaults"],
+}
 
-    defaults: ["bpf_defaults"],
+rust_bindgen {
+    name: "libbpf_android_bindgen",
+    crate_name: "bpf_android_bindgen",
+    wrapper_src: "include/libbpf_android.h",
+    source_stem: "bindings",
+    bindgen_flags: [
+        "--verbose",
+    ],
     cflags: [
         "-Werror",
         "-Wall",
         "-Wextra",
+        "-Wno-pragma-once-outside-header",
+    ],
+    shared_libs: [
+        "libbase",
+        "libutils",
+        "liblog",
+        "libbpf_android",
     ],
 }
 
@@ -66,10 +81,8 @@ cc_test {
     srcs: [
         "BpfLoadTest.cpp",
     ],
-    defaults: ["bpf_defaults"],
+    defaults: ["bpf_cc_defaults"],
     cflags: [
-        "-Wall",
-        "-Werror",
         "-Wno-error=unused-variable",
     ],
     static_libs: [
@@ -89,29 +102,18 @@ cc_test {
     require_root: true,
 }
 
-cc_binary {
+rust_binary {
     name: "bpfloader",
-
-    defaults: ["bpf_defaults"],
-    cflags: [
-        "-Wall",
-        "-Werror",
-        "-Wthread-safety",
-    ],
-    sanitize: {
-        integer_overflow: true,
-    },
-
-    header_libs: ["bpf_headers"],
-    shared_libs: [
-        "libbase",
-        "liblog",
-    ],
-    static_libs: ["libbpf_android"],
+    cfgs: select(release_flag("RELEASE_BPF_ENABLE_LIBBPF"), {
+        true: ["enable_libbpf"],
+        default: [],
+    }),
     srcs: [
-        "BpfLoader.cpp",
+        "bpfloader.rs",
     ],
-
+    rustlibs: [
+        "libbpf_android_bindgen",
+    ],
     required: [
         "timeInState.o",
     ],
