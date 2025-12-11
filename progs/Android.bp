@@ -27,7 +27,10 @@ cc_library_headers {
     export_include_dirs: ["include"],
 }
 
-bpf {
-    name: "bpfRingbufProg.o",
+libbpf_prog {
+    name: "bpfRingbufProg.bpf",
     srcs: ["bpfRingbufProg.c"],
+    header_libs: [
+        "android_bpf_defs",
+    ],
 }

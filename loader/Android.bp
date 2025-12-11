@@ -44,9 +44,11 @@ cc_library {
     ],
     header_libs: [
         "bpf_headers",
+        "bpf_prog_platform_headers",
     ],
     export_header_lib_headers: [
         "bpf_headers",
+        "bpf_prog_platform_headers",
     ],
     export_include_dirs: ["include"],
     defaults: ["bpf_cc_defaults"],
@@ -74,40 +76,8 @@ rust_bindgen {
     ],
 }
 
-cc_test {
-    name: "libbpf_load_test",
-    test_suites: ["general-tests"],
-    header_libs: ["bpf_headers"],
-    srcs: [
-        "BpfLoadTest.cpp",
-    ],
-    defaults: ["bpf_cc_defaults"],
-    cflags: [
-        "-Wno-error=unused-variable",
-    ],
-    static_libs: [
-        "libbpf_android",
-        "libgmock",
-    ],
-    shared_libs: [
-        "libbpf_bcc",
-        "libbase",
-        "liblog",
-        "libutils",
-    ],
-
-    data: [
-        ":bpfLoadTpProg.o",
-    ],
-    require_root: true,
-}
-
-rust_binary {
-    name: "bpfloader",
-    cfgs: select(release_flag("RELEASE_BPF_ENABLE_LIBBPF"), {
-        true: ["enable_libbpf"],
-        default: [],
-    }),
+rust_defaults {
+    name: "bpfloader_defaults",
     srcs: [
         "bpfloader.rs",
     ],
@@ -118,20 +88,29 @@ rust_binary {
         "libanyhow",
         "liblog_rust",
         "liblibbpf_rs",
+        "liblibbpf_sys",
         "liblibc",
+        "librustutils",
     ],
-    required: [] + select(release_flag("RELEASE_BPF_ENABLE_LIBBPF"), {
-        true: [
-            "timeInState.bpf",
-        ],
-        default: [
-            "timeInState.o",
-        ],
-    }),
+}
+
+rust_test {
+    name: "bpfloader_tests",
+    defaults: ["bpfloader_defaults"],
+    test_suites: ["general-tests"],
+}
+
+rust_binary {
+    name: "bpfloader",
+    defaults: ["bpfloader_defaults"],
+    required: [
+        "bpftool",
+        "timeInState.bpf",
+    ],
     product_variables: {
         debuggable: {
             required: [
-                "bpfRingbufProg.o",
+                "bpfRingbufProg.bpf",
             ],
         },
     },
